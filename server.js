@@ -12,7 +12,10 @@ app.get("/test", (req, res) => {
 });
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : false
 });
 
 async function initDatabase() {
@@ -83,10 +86,49 @@ let paused = false;
 let giftRules = [];
 let twitchEventSubSocket = null;
 
-function loadData() {
+async function loadData() {
 
+  // Sur Render : charger depuis PostgreSQL
+  if (process.env.DATABASE_URL) {
+    try {
+      await initDatabase();
+
+      const result = await pool.query(`
+        SELECT total_seconds, paused, updated_at
+        FROM timer_state
+        WHERE id = 1
+      `);
+
+    if (result.rows.length > 0) {
+  const row = result.rows[0];
+
+  totalSeconds = Number(row.total_seconds);
+
+  // Après une coupure, le timer reste au temps sauvegardé
+  // et redémarre toujours en pause.
+  paused = true;
+
+  await saveData();
+}
+
+      console.log(
+        "✅ Timer récupéré depuis PostgreSQL :",
+        totalSeconds,
+        "secondes"
+      );
+
+      return;
+
+    } catch (error) {
+      console.error(
+        "Erreur chargement PostgreSQL :",
+        error.message
+      );
+    }
+  }
+
+  // Sur ton PC : utiliser data.json
   try {
-
     if (!fs.existsSync(DATA_FILE)) {
       return;
     }
@@ -112,43 +154,60 @@ function loadData() {
     console.log("Données sauvegardées chargées ✅");
 
   } catch (error) {
-
     console.error(
-      "Erreur lecture data.json :",
+      "Erreur chargement :",
       error.message
     );
-
   }
 }
 
 
-function saveData() {
-
+async function saveData() {
   const data = {
     totalSeconds: totalSeconds,
     paused: paused,
     giftRules: giftRules
   };
 
-  try {
+  // Sur Render : sauvegarde PostgreSQL
+  if (process.env.DATABASE_URL) {
+    try {
+      await pool.query(
+        `
+        UPDATE timer_state
+        SET total_seconds = $1,
+            paused = $2,
+            updated_at = NOW()
+        WHERE id = 1
+        `,
+        [totalSeconds, paused]
+      );
+    } catch (error) {
+      console.error(
+        "Erreur sauvegarde PostgreSQL :",
+        error.message
+      );
+    }
 
+    return;
+  }
+
+  // Sur ton PC : garde data.json
+  try {
     fs.writeFileSync(
       DATA_FILE,
       JSON.stringify(data, null, 2)
     );
-
   } catch (error) {
-
     console.error(
       "Erreur sauvegarde :",
       error.message
     );
-
   }
 }
 
 
-loadData();
+loadData().catch(console.error);
 
 let detectedGifts = [];
 
@@ -569,9 +628,10 @@ function startTwitchEventSub() {
 async function createTwitchSubscriptions(sessionId) {
 
   const subscriptions = [
-    "channel.subscribe",
-    "channel.subscription.gift"
-  ];
+  "channel.subscribe",
+  "channel.subscription.gift",
+  "stream.offline"
+];
 
   for (const type of subscriptions) {
 
@@ -662,6 +722,17 @@ function handleTwitchEvent(message) {
       " gift sub(s) → +" +
       amount * 8 +
       " min"
+    );
+  }
+
+  if (type === "stream.offline") {
+
+    paused = true;
+
+    saveData();
+
+    console.log(
+      "🔴 Twitch OFFLINE → timer mis en pause automatiquement"
     );
   }
 }
@@ -947,6 +1018,24 @@ app.post("/api/test/tiktok/coins", (req, res) => {
     addedSeconds: coins,
     seconds: totalSeconds
   });
+});
+
+app.post("/api/test/twitch/offline", async (req, res) => {
+
+  paused = true;
+
+  await saveData();
+
+  console.log(
+    "🧪 TEST Twitch OFFLINE → timer mis en pause"
+  );
+
+  res.json({
+    success: true,
+    paused: paused,
+    seconds: totalSeconds
+  });
+
 });
 
 app.listen(PORT, () => {
