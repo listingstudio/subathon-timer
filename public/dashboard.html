@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Subathon Control</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #0f0f0f;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1b1b1b;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+
+    #timer {
+      font-size: 64px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin: 5px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    input, select {
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      margin: 5px;
+      font-size: 15px;
+    }
+
+    .status {
+      margin-top: 12px;
+      color: #aaa;
+    }
+
+    .rule {
+      background: #292929;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>Subathon Control</h1>
+
+  <div class="card">
+
+    <h2>Timer</h2>
+
+    <div id="timer">00:00:00</div>
+
+    <button onclick="addTime(480)">+8 min</button>
+    <button onclick="addTime(300)">+5 min</button>
+    <button onclick="addTime(60)">+1 min</button>
+    <button onclick="addTime(-60)">-1 min</button>
+
+    <button onclick="togglePause()">
+      Pause / Play
+    </button>
+
+  </div>
+
+<div class="card">
+
+  <h2>Twitch</h2>
+
+  <button onclick="connectTwitch()">
+    Connecter Twitch
+  </button>
+
+  <div id="twitchStatus" class="status">
+    Non connecté
+  </div>
+
+</div>
+
+  <div class="card">
+
+    <h2>TikTok LIVE</h2>
+
+    <input
+      id="tiktokUsername"
+      placeholder="Nom TikTok sans @"
+    >
+
+    <button onclick="connectTikTok()">
+      Connecter
+    </button>
+
+    <div id="tiktokStatus" class="status">
+      Non connecté
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>Règles cadeaux TikTok</h2>
+
+    <select id="giftSelect">
+  <option value="">
+    Aucun cadeau détecté
+  </option>
+</select>
+
+    <input
+      id="giftTime"
+      type="number"
+      min="1"
+      placeholder="Temps"
+    >
+
+    <select id="giftUnit">
+      <option value="1">Secondes</option>
+      <option value="60" selected>Minutes</option>
+      <option value="3600">Heures</option>
+    </select>
+
+    <button onclick="addGiftRule()">
+      + Ajouter
+    </button>
+
+    <div id="giftRules"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+function formatTime(seconds) {
+
+  const hours =
+    Math.floor(seconds / 3600);
+
+  const minutes =
+    Math.floor((seconds % 3600) / 60);
+
+  const secs =
+    seconds % 60;
+
+  return (
+    String(hours).padStart(2, "0") + ":" +
+    String(minutes).padStart(2, "0") + ":" +
+    String(secs).padStart(2, "0")
+
+    
+  );
+}
+
+
+async function refreshTimer() {
+
+  const response =
+    await fetch("/api/time");
+
+  const data =
+    await response.json();
+
+  document.getElementById("timer")
+    .textContent =
+    formatTime(data.seconds);
+}
+
+
+async function addTime(seconds) {
+
+  await fetch("/api/add", {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      seconds: seconds
+    })
+
+  });
+
+  refreshTimer();
+}
+
+
+async function togglePause() {
+
+  await fetch("/api/pause", {
+    method: "POST"
+  });
+
+  refreshTimer();
+}async function connectTikTok() {
+
+  const username =
+    document
+      .getElementById("tiktokUsername")
+      .value
+      .trim();
+
+  const status =
+    document.getElementById("tiktokStatus");
+
+  if (!username) {
+    status.textContent =
+      "Entre un nom TikTok.";
+    return;
+  }
+
+  status.textContent =
+    "Connexion au LIVE...";
+
+  try {
+
+    const response =
+      await fetch("/api/tiktok/connect", {
+
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+          username: username
+        })
+
+      });
+
+    const data =
+      await response.json();
+
+    if (data.success) {
+
+      status.textContent =
+        "🟢 Connecté à @" + data.username;
+
+    } else {
+
+      status.textContent =
+        data.message;
+
+    }
+
+  } catch (error) {
+
+    status.textContent =
+      "Erreur de connexion TikTok";
+
+  }
+}
+
+
+async function addGiftRule() {
+
+  const select =
+    document.getElementById("giftSelect");
+
+  const selectedOption =
+    select.options[select.selectedIndex];
+
+  const giftId =
+    select.value;
+
+  const giftName =
+    selectedOption
+      ? selectedOption.dataset.giftName
+      : "";
+
+  const time =
+    Number(
+      document.getElementById("giftTime").value
+    );
+
+  const multiplier =
+    Number(
+      document.getElementById("giftUnit").value
+    );
+
+  if (
+    !giftId ||
+    !giftName ||
+    !time ||
+    time <= 0
+  ) {
+    alert(
+      "Choisis un cadeau détecté et entre un temps."
+    );
+
+    return;
+  }
+
+  const seconds =
+    time * multiplier;
+
+  const response =
+    await fetch("/api/gifts", {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        giftId: giftId,
+        giftName: giftName,
+        seconds: seconds
+      })
+
+    });
+
+  const data =
+    await response.json();
+
+  if (!data.success) {
+    alert(
+      data.message || "Erreur"
+    );
+
+    return;
+  }
+
+  document.getElementById("giftTime").value = "";
+
+  loadGiftRules();
+}
+
+
+async function loadGiftRules() {
+
+  const response =
+    await fetch("/api/gifts");
+
+  const rules =
+    await response.json();
+
+  const container =
+    document.getElementById("giftRules");
+
+  container.innerHTML = "";
+
+  if (rules.length === 0) {
+
+    container.innerHTML =
+      "<p class='status'>Aucune règle configurée.</p>";
+
+    return;
+  }
+
+  rules.forEach(rule => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "rule";
+
+    div.innerHTML =
+      "<span>" +
+      "🎁 " +
+      rule.giftName +
+      " → +" +
+      formatRuleTime(rule.seconds) +
+      "</span>" +
+
+      "<button onclick='deleteGiftRule(" +
+      rule.id +
+      ")'>Supprimer</button>";
+
+    container.appendChild(div);
+
+  });
+}
+
+
+function formatRuleTime(seconds) {
+
+  if (seconds >= 3600 &&
+      seconds % 3600 === 0) {
+
+    return (
+      seconds / 3600
+    ) + " h";
+  }
+
+  if (seconds >= 60 &&
+      seconds % 60 === 0) {
+
+    return (
+      seconds / 60
+    ) + " min";
+  }
+
+  return seconds + " sec";
+}
+
+
+async function deleteGiftRule(id) {
+
+  await fetch(
+    "/api/gifts/" + id,
+    {
+      method: "DELETE"
+    }
+  );
+
+  loadGiftRules();
+}
+
+
+async function loadTikTokStatus() {
+
+  const response =
+    await fetch("/api/tiktok/status");
+
+  const data =
+    await response.json();
+
+  if (data.connected) {
+
+    document
+      .getElementById("tiktokStatus")
+      .textContent =
+      "🟢 Connecté à @" + data.username;
+
+  }
+}
+
+async function loadDetectedGifts() {
+
+  const response =
+    await fetch("/api/tiktok/gifts");
+
+  const gifts =
+    await response.json();
+
+  const select =
+    document.getElementById("giftSelect");
+
+  const currentValue =
+    select.value;
+
+  select.innerHTML = "";
+
+  if (gifts.length === 0) {
+
+    const option =
+      document.createElement("option");
+
+    option.value = "";
+    option.textContent =
+      "Aucun cadeau détecté";
+
+    select.appendChild(option);
+
+    return;
+  }
+
+  gifts.forEach(gift => {
+
+    const option =
+      document.createElement("option");
+
+    option.value = gift.giftId;
+
+    option.textContent =
+      gift.giftName;
+
+    option.dataset.giftName =
+      gift.giftName;
+
+    select.appendChild(option);
+
+  });
+
+  if (
+    currentValue &&
+    gifts.some(
+      gift => gift.giftId === currentValue
+    )
+  ) {
+    select.value = currentValue;
+  }
+}
+
+setInterval(refreshTimer, 500);
+
+refreshTimer();
+loadGiftRules();
+loadTikTokStatus();
+
+loadDetectedGifts();
+
+setInterval(loadDetectedGifts, 2000);
+
+function connectTwitch() {
+  window.location.href = "/auth/twitch";
+}
+
+async function loadTwitchStatus() {
+  const response = await fetch("/api/twitch/status");
+  const data = await response.json();
+
+  const status = document.getElementById("twitchStatus");
+
+  if (data.connected) {
+    status.textContent = "🟢 Connecté à @" + data.username;
+  } else {
+    status.textContent = "Non connecté";
+  }
+}
+
+loadTwitchStatus();
+
+</script>
+
+</body>
+</html>
