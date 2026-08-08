@@ -1092,7 +1092,10 @@ app.post("/api/tiktok/connect", async (req, res) => {
     }
 
     tiktokConnection =
-      new TikTokLiveConnection(username)
+  new TikTokLiveConnection(username, {
+    processInitialData: false,
+    enableExtendedGiftInfo: true
+  });
 
     const state =
       await tiktokConnection.connect();
