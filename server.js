@@ -430,10 +430,10 @@ app.post("/api/tiktok/connect", async (req, res) => {
       }
     }
 
-    tiktokConnection =
-  new TikTokLiveConnection(username);
+   tiktokConnection =
+  new TikTokLiveConnection(username, {});
 
-    await tiktokConnection.connect();
+await tiktokConnection.connect();
 
     connectedTikTokUsername = username;
 
