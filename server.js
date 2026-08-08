@@ -431,7 +431,9 @@ app.post("/api/tiktok/connect", async (req, res) => {
     }
 
     tiktokConnection =
-      new TikTokLiveConnection
+  new TikTokLiveConnection({
+    uniqueId: username
+  });
 
     await tiktokConnection.connect();
 
