@@ -1,6 +1,6 @@
 const WebSocket = require("ws");
 require("dotenv").config();
-
+const { Pool } = require("pg");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
@@ -10,6 +10,36 @@ const app = express();
 app.get("/test", (req, res) => {
   res.send("TEST OK");
 });
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+async function initDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS timer_state (
+      id INTEGER PRIMARY KEY,
+      total_seconds BIGINT NOT NULL DEFAULT 0,
+      paused BOOLEAN NOT NULL DEFAULT true,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    INSERT INTO timer_state (id, total_seconds, paused)
+    VALUES (1, 0, true)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  console.log("✅ Base de données timer prête");
+}
+
+if (process.env.DATABASE_URL) {
+  initDatabase().catch(console.error);
+} else {
+  console.log("⚠️ Mode local : PostgreSQL désactivé");
+}
+
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
