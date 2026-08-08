@@ -1138,6 +1138,50 @@ try {
   }
 });
 
+app.post("/api/tiktok/gift", async (req, res) => {
+  const secret = req.headers["x-tiktok-secret"];
+
+  if (
+    !process.env.TIKTOK_BRIDGE_SECRET ||
+    secret !== process.env.TIKTOK_BRIDGE_SECRET
+  ) {
+    return res.status(401).json({
+      success: false,
+      message: "Non autorisé"
+    });
+  }
+
+  const coins = Number(req.body.coins);
+
+  if (
+    !Number.isFinite(coins) ||
+    coins <= 0 ||
+    coins > 1000000
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Nombre de coins invalide"
+    });
+  }
+
+  // Règle du subathon :
+  // 1 coin TikTok = 1 seconde
+  totalSeconds += Math.floor(coins);
+
+  await saveData();
+
+  console.log(
+    `🎁 TikTok Bridge : ${coins} coins → +${Math.floor(coins)} sec`
+  );
+
+  res.json({
+    success: true,
+    coins: coins,
+    secondsAdded: Math.floor(coins),
+    totalSeconds: totalSeconds
+  });
+});
+
 app.listen(PORT, () => {
 
 
