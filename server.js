@@ -4,7 +4,10 @@ const { Pool } = require("pg");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const { WebcastPushConnection } = require("tiktok-live-connector");
+const {
+  TikTokLiveConnection,
+  WebcastEvent
+} = require("tiktok-live-connector");
 
 const app = express();
 app.get("/test", (req, res) => {
@@ -428,7 +431,7 @@ app.post("/api/tiktok/connect", async (req, res) => {
     }
 
     tiktokConnection =
-      new WebcastPushConnection(username);
+      new TikTokLiveConnection
 
     await tiktokConnection.connect();
 
