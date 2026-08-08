@@ -1064,6 +1064,62 @@ app.post("/api/stop", async (req, res) => {
     seconds: totalSeconds
   });
 });
+
+app.post("/api/tiktok/connect", async (req, res) => {
+  const username = String(req.body.username || "")
+    .trim()
+    .replace("@", "");
+
+  if (!username) {
+    return res.status(400).json({
+      success: false,
+      message: "Nom TikTok manquant"
+    });
+  }
+
+  console.log(
+    "📱 Tentative connexion TikTok LIVE : @" + username
+  );
+
+  try {
+    if (tiktokConnection) {
+      try {
+        tiktokConnection.disconnect();
+      } catch (error) {}
+    }
+
+    tiktokConnection =
+      new WebcastPushConnection(username);
+
+    const state =
+      await tiktokConnection.connect();
+
+    console.log(
+      "✅ TikTok LIVE connecté : @" + username
+    );
+
+    console.log(
+      "Room ID TikTok : " + state.roomId
+    );
+
+    res.json({
+      success: true,
+      username: username
+    });
+
+  } catch (error) {
+    console.error(
+      "❌ Connexion TikTok impossible :",
+      error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 app.listen(PORT, () => {
 
 
