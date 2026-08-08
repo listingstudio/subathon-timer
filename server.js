@@ -191,6 +191,40 @@ app.post("/api/add", (req, res) => {
   });
 });
 
+app.post("/api/set-time", (req, res) => {
+  const hours = Number(req.body.hours || 0);
+  const minutes = Number(req.body.minutes || 0);
+  const seconds = Number(req.body.seconds || 0);
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    !Number.isFinite(seconds) ||
+    hours < 0 ||
+    minutes < 0 ||
+    seconds < 0 ||
+    minutes > 59 ||
+    seconds > 59
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Temps invalide"
+    });
+  }
+
+  totalSeconds =
+    (hours * 3600) +
+    (minutes * 60) +
+    seconds;
+
+  saveData();
+
+  res.json({
+    success: true,
+    seconds: totalSeconds
+  });
+});
+
 app.post("/api/pause", (req, res) => {
 
   paused = !paused;
@@ -201,6 +235,7 @@ app.post("/api/pause", (req, res) => {
     paused: paused
   });
 });
+
 
 // ================================
 // RÈGLES CADEAUX

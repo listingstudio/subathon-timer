@@ -79,6 +79,16 @@
 
     <div id="timer">00:00:00</div>
 
+    <div style="margin-bottom: 15px;">
+  <input id="setHours" type="number" min="0" placeholder="Heures" />
+  <input id="setMinutes" type="number" min="0" max="59" placeholder="Minutes" />
+  <input id="setSeconds" type="number" min="0" max="59" placeholder="Secondes" />
+
+  <button onclick="setTimerManual()">
+    Définir le timer
+  </button>
+</div>
+
     <button onclick="addTime(480)">+8 min</button>
     <button onclick="addTime(300)">+5 min</button>
     <button onclick="addTime(60)">+1 min</button>
@@ -213,6 +223,32 @@ async function addTime(seconds) {
   refreshTimer();
 }
 
+async function setTimerManual() {
+  const hours =
+    Number(document.getElementById("setHours").value || 0);
+
+  const minutes =
+    Number(document.getElementById("setMinutes").value || 0);
+
+  const seconds =
+    Number(document.getElementById("setSeconds").value || 0);
+
+  await fetch("/api/set-time", {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      hours: hours,
+      minutes: minutes,
+      seconds: seconds
+    })
+  });
+
+  refreshTimer();
+}
 
 async function togglePause() {
 
