@@ -1097,6 +1097,18 @@ app.post("/api/tiktok/connect", async (req, res) => {
     enableExtendedGiftInfo: true
   });
 
+  console.log("TikTok username reçu :", username);
+
+try {
+  const roomId = await tiktokConnection.fetchRoomId();
+  console.log("TikTok Room ID trouvé :", roomId);
+} catch (error) {
+  console.error(
+    "TikTok Room ID impossible :",
+    error.message
+  );
+}
+
     const state =
       await tiktokConnection.connect();
 
