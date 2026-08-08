@@ -431,9 +431,7 @@ app.post("/api/tiktok/connect", async (req, res) => {
     }
 
     tiktokConnection =
-  new TikTokLiveConnection({
-    uniqueId: username
-  });
+  new TikTokLiveConnection(username);
 
     await tiktokConnection.connect();
 
@@ -1094,7 +1092,7 @@ app.post("/api/tiktok/connect", async (req, res) => {
     }
 
     tiktokConnection =
-      new WebcastPushConnection(username);
+      new TikTokLiveConnection(username)
 
     const state =
       await tiktokConnection.connect();
