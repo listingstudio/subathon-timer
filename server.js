@@ -1037,7 +1037,33 @@ app.post("/api/test/twitch/offline", async (req, res) => {
   });
 
 });
+app.post("/api/play", async (req, res) => {
+  paused = false;
 
+  await saveData();
+
+  console.log("▶ Timer démarré");
+
+  res.json({
+    success: true,
+    paused: false,
+    seconds: totalSeconds
+  });
+});
+
+app.post("/api/stop", async (req, res) => {
+  paused = true;
+
+  await saveData();
+
+  console.log("⏸ Timer mis en pause");
+
+  res.json({
+    success: true,
+    paused: true,
+    seconds: totalSeconds
+  });
+});
 app.listen(PORT, () => {
 
 

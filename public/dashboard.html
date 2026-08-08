@@ -94,9 +94,13 @@
     <button onclick="addTime(60)">+1 min</button>
     <button onclick="addTime(-60)">-1 min</button>
 
-    <button onclick="togglePause()">
-      Pause / Play
-    </button>
+    <button onclick="playTimer()">
+  ▶ Démarrer
+</button>
+
+<button onclick="pauseTimer()">
+  ⏸ Pause
+</button>
 
   </div>
 
@@ -168,6 +172,22 @@
 </div>
 
 <script>
+
+async function playTimer() {
+  await fetch("/api/play", {
+    method: "POST"
+  });
+
+  refreshTimer();
+}
+
+async function pauseTimer() {
+  await fetch("/api/stop", {
+    method: "POST"
+  });
+
+  refreshTimer();
+}
 
 function formatTime(seconds) {
 
